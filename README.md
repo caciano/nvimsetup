@@ -1,116 +1,240 @@
-# Neovim configuration
+# Neovim config — Copilot · LSP · Markdown notes
 
-Neovim configuration with GitHub Copilot, LSP, fuzzy finder, notes and markdown preview.
+A single-file [Neovim](https://neovim.io/) configuration built around GitHub Copilot,
+a fast native-LSP setup, and a Markdown note-taking workflow. Modern, lazy-loaded, and
+designed to be easy to maintain — all the knobs you'll touch live in one block at the top.
 
-![Neovim Copilot screenshot ](nvim-copilot.png)
-![Neovim Notes and Markdown screenshot ](nvim-markdown.png)
+> Requires Neovim **0.11+** · plugin manager: [lazy.nvim](https://github.com/folke/lazy.nvim) (bootstraps itself)
 
-## Prerequisites
+Pairs with the [**dante** colorscheme](#colorscheme) (a warm, dark theme included as a companion).
 
-| Requirements |
-|-------------|
-| Neovim 0.11+ |
-| Git |
-| Node.js ≥ 18 + npm |
-| Nerd Font |
-| GitHub Copilot subscription |
-| C compiler (gcc) |
+---
 
-LSP servers are installed automatically by Mason — no manual install needed.
+## Features
 
-## Install
+- **Completion** — [blink.cmp](https://github.com/saghen/blink.cmp): Rust fuzzy matcher, LSP + Copilot + snippets + path + buffer, auto-brackets, signature help.
+- **AI** — [copilot.lua](https://github.com/zbirenbaum/copilot.lua) inline suggestions (ghost text) + [CopilotChat](https://github.com/CopilotC-Nvim/CopilotChat.nvim) for explain/test/review/refactor.
+- **LSP** — native `vim.lsp` (0.11) with [Mason](https://github.com/williamboman/mason.nvim) auto-installing servers; capabilities wired to blink.cmp.
+- **Finder** — [fzf-lua](https://github.com/ibhagwan/fzf-lua) for files, live grep, buffers, diagnostics.
+- **Files** — [oil.nvim](https://github.com/stevearc/oil.nvim): edit the filesystem like a buffer.
+- **Git** — [gitsigns](https://github.com/lewis6991/gitsigns.nvim) + [lazygit](https://github.com/kdheepak/lazygit.nvim) + [fugitive](https://github.com/tpope/vim-fugitive).
+- **Notes** — [mdnotes.nvim](https://github.com/ymic9963/mdnotes.nvim) + [markview](https://github.com/OXY2DEV/markview.nvim) inline render + [live-preview](https://github.com/brianhuster/live-preview.nvim) (browser, no Node) + automatic Git versioning of your notes folder.
+- **Editing** — Tree-sitter highlighting, [nvim-surround](https://github.com/kylechui/nvim-surround), [mini.align](https://github.com/echasnovski/mini.align), native commenting (`gc`), autopairs.
+- **UI** — [lualine](https://github.com/nvim-lualine/lualine.nvim), [which-key](https://github.com/folke/which-key.nvim), [indent-blankline](https://github.com/lukas-reineke/indent-blankline.nvim).
+
+> The config file's inline comments are written in Portuguese; this README is the English reference.
+
+---
+
+## Installation
 
 ```bash
-cp ~/Downloads/init.lua.ai ~/.config/nvim/init.lua
-rm -f ~/.config/nvim/init.vim
-nvim +":Lazy sync"
-nvim +":Copilot auth"       # authenticate in browser
-nvim +":Mason"              # press i on each LSP server
-nvim +":TSInstall all"      # install tree-sitter parsers
+# 1. Back up any existing config
+mv ~/.config/nvim ~/.config/nvim.bak 2>/dev/null
+
+# 2. Drop in the config
+mkdir -p ~/.config/nvim
+cp init.lua ~/.config/nvim/init.lua
+
+# 3. (Optional) add the companion colorscheme — see the dante repo
+mkdir -p ~/.config/nvim/colors
+cp dante.lua ~/.config/nvim/colors/dante.lua
+
+# 4. First launch: plugins install automatically, then authenticate Copilot
+nvim +"Lazy sync" +"Copilot auth"
 ```
+
+The default theme is `dante`. If you don't install `dante.lua`, set `theme` (see
+[Customization](#customization)) to a colorscheme you have, e.g. `"tokyonight"` or `"seoul256"`,
+both of which ship with this config.
+
+---
+
+## Software dependencies (Ubuntu 24.04)
+
+Neovim is just the editor; several plugins call external programs. Install per need.
+
+### Essentials
+
+```bash
+# Neovim 0.11+ (the default Ubuntu repo ships an older version)
+sudo add-apt-repository ppa:neovim-ppa/unstable -y
+sudo apt update && sudo apt install -y neovim
+
+# Base tooling: git/curl for lazy & Mason, build-essential to compile Tree-sitter parsers
+sudo apt install -y git curl unzip build-essential
+```
+
+### Search & icons
+
+```bash
+sudo apt install -y fzf ripgrep fd-find       # fzf-lua engine + grep (+ optional fd)
+ln -s "$(command -v fdfind)" ~/.local/bin/fd  # Ubuntu names the binary `fdfind`
+
+sudo apt install -y wl-clipboard              # system clipboard (Wayland; use xclip on X11)
+```
+
+A **Nerd Font** is required for icons (oil, fzf-lua, lualine, markview):
+
+```bash
+mkdir -p ~/.local/share/fonts && cd /tmp
+curl -fLo Ubuntu.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Ubuntu.zip
+unzip -o Ubuntu.zip -d ~/.local/share/fonts/UbuntuNerdFont && fc-cache -f
+# Then select "Ubuntu Nerd Font" (or another Nerd Font) in your terminal.
+```
+
+### Git UI (lazygit)
+
+```bash
+LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" \
+  | grep -Po '"tag_name": *"v\K[^"]*')
+curl -fLo /tmp/lazygit.tar.gz \
+  "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+tar -xf /tmp/lazygit.tar.gz -C /tmp lazygit && sudo install /tmp/lazygit -D -t /usr/local/bin/
+```
+
+### Copilot
+
+GitHub Copilot needs **Node.js 18+**. The config resolves `node` from your `PATH`
+automatically (works with `nvm`), so just make sure Node is available in the shell that
+starts Neovim. `live-preview` needs **no** Node.
+
+### Per-language LSP (optional)
+
+Mason downloads most servers; a few need a toolchain:
+
+```bash
+sudo apt install -y clangd golang-go                 # C/C++, Go
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust (rust_analyzer)
+# Python/TS/Bash/JSON servers use Node; lua_ls & marksman are downloaded by Mason.
+```
+
+### LaTeX (optional, for vimtex)
+
+```bash
+sudo apt install -y zathura latexmk texlive-latex-recommended texlive-latex-extra
+```
+
+Verify everything with `:checkhealth`, `:Mason`, and `:Copilot status`.
+
+---
 
 ## Keymaps
 
-### AI — Copilot
+Leader is `<Space>`. Press `F1` (or `<Space>`) any time to see the live key map (which-key).
 
-| Key | Mode | Action |
-|-----|------|--------|
-| `<C-l>` | Insert | Accept ghost suggestion |
-| `<C-k>` | Insert | Accept one word |
-| `<C-j>` | Insert | Accept one line |
-| `<C-]>` | Insert | Dismiss suggestion |
-| `<leader>cc` | Normal / Visual | Open chat |
-| `<leader>ce` | Visual | Explain selection |
-| `<leader>ct` | Visual | Generate tests |
-| `<leader>cr` | Visual | Review code |
-| `<leader>cR` | Visual | Refactor |
-| `<leader>cT` | Normal | Toggle chat window |
-| `<leader>cC` | Normal | Reset chat context |
+### Function keys
 
-### Editor
+| Key | Action | Alt |
+|-----|--------|-----|
+| `F1` | Key map (which-key) | — |
+| `F2` | LSP rename | `<leader>rn` |
+| `F3` | Find files | `Ctrl-p` |
+| `F4` | Live grep (project) | `Ctrl-g` |
+| `F5` | Browse notes | — |
+| `F6` | File manager (oil, float) | `-` (parent dir) |
+| `F7` | Undo tree | — |
+| `F8` | LazyGit | `<leader>lg` |
+| `F9` | Live preview in browser (Markdown) | — |
+| `F10` | Inline Markdown render (markview) | — |
+
+### Completion (insert mode)
 
 | Key | Action |
 |-----|--------|
-| `<F4>` | Markdown → browser with live reload |
-| `<F5>` | Recent Notes |
-| `<F6>` | File explorer |
-| `<F7>` | Undo tree |
-| `<F10>` | Markdown inline preview |
-| `<C-p>` | Find files |
-| `<C-g>` | Search text in project |
-| `<C-b>` | Open buffers |
-| `<leader>q` | Close buffer |
-| `<leader><space>` | Clear search highlight |
-| `gd` | Go to definition |
-| `gr` | References |
-| `gi` | Implementations |
-| `K` | Hover documentation |
-| `<leader>rn` | Rename symbol |
-| `<leader>ca` | Code action |
-| `<leader>cf` | Format file |
-| `gc` | Toggle comment |
-| `]c` / `[c` | Next / previous git hunk |
-| `<leader>hs` | Stage hunk |
-| `<leader>hr` | Reset hunk |
-| `<leader>hp` | Preview hunk |
-| `<leader>hb` | Blame line |
+| `Tab` / `Shift-Tab` | Next / previous item (and snippet jump) |
+| `Enter` | Accept |
+| `Ctrl-Space` | Open menu / show docs |
+| `Ctrl-e` | Hide menu |
+| `Ctrl-l` / `Ctrl-k` / `Ctrl-j` | Copilot: accept all / word / line |
+| `Alt-]` / `Alt-[` | Copilot: next / previous suggestion |
 
-### Commands
+### LSP (buffers with a server)
 
-| Command | Action |
-|---------|--------|
-| `:Copilot auth` | Authenticate |
-| `:Copilot status` | Connection status |
-| `:CopilotChat` | Open chat |
-| `:CopilotChatExplain` | Explain selection |
-| `:CopilotChatTests` | Generate tests |
-| `:CopilotChatReview` | Review code |
-| `:CopilotChatRefactor` | Refactor |
-| `:CopilotChatReset` | Clear chat history |
-| `:Mason` | Manage LSP servers |
-| `:Lazy` | Manage plugins |
-| `:Lazy sync` | Install plugins |
-| `:TSInstall <lang>` | Install tree-sitter parser |
-| `:checkhealth` | Diagnostics |
-| `:Markview toggle` | Toggle inline markdown preview |
+| Key | Action |
+|-----|--------|
+| `gd` `gr` `gi` | Definition · references · implementation |
+| `K` | Hover docs |
+| `<leader>rn` | Rename · `<leader>ca` code action · `<leader>cf` format |
 
-## Plugins
+### Git
 
-| Category | Plugin |
-|----------|--------|
-| AI | `copilot.lua` + `copilot-cmp` + `CopilotChat.nvim` |
-| Markdown | `markview.nvim` (inline) + `markdown-preview.nvim` (browser) |
-| LSP | `mason.nvim` + `mason-lspconfig` + `nvim-lspconfig` |
-| Completion | `nvim-cmp` + `LuaSnip` |
-| Fuzzy finder | `telescope.nvim` |
-| Syntax | `nvim-treesitter` |
-| Git | `vim-fugitive` + `gitsigns.nvim` |
-| File tree | `nvim-tree.lua` |
-| Theme | `tokyonight.nvim` |
-| Statusline | `lualine.nvim` |
-| Indent guides | `indent-blankline.nvim` |
-| Undo | `undotree` |
-| Editing | `vim-surround` + `vim-commentary` + `nvim-autopairs` + `auto-pairs` + `vim-easy-align` |
-| LaTeX | `vimtex` |
-| Notes | `xolox/vim-notes` |
-| Util | `which-key.nvim` + `vim-highlightedyank` |
+| Key | Action |
+|-----|--------|
+| `]c` / `[c` | Next / previous hunk |
+| `<leader>hp` `<leader>hs` `<leader>hr` `<leader>hb` | Preview · stage · reset · blame hunk |
+| `<leader>lg` | LazyGit · `:Git` opens fugitive |
+
+### Notes (`<Space>n…`)
+
+| Key | Action |
+|-----|--------|
+| `F5` / `<leader>nf` | Browse / search notes |
+| `<leader>ni` `<leader>nj` `<leader>nJ` | Index · today's journal · insert journal entry |
+| `<leader>nt` `<leader>no` | Generate ToC · outliner toggle |
+| `<leader>m…` | mdnotes maps inside Markdown buffers (links, headings, tasks, bold/italic) |
+
+### Editing & navigation
+
+| Key | Action |
+|-----|--------|
+| `gcc` / `gc{motion}` | Toggle comment (native) |
+| `ys` / `ds` / `cs` | Add / delete / change surround |
+| `ga` / `gA` | Align (mini.align) |
+| `Shift`+arrows | Move between windows |
+| `Ctrl-Shift-Left/Right` | Previous / next buffer |
+| `<leader>q` | Close buffer · `<leader><Space>` clear search highlight |
+
+### CopilotChat (`<Space>c…`)
+
+`cc` chat · `ce` explain · `ct` tests · `cr` review · `cR` refactor · `cT` toggle · `cC` reset
+(visual selection for `ce/ct/cr/cR`).
+
+---
+
+## Notes workflow & Git versioning
+
+Notes live in `~/Documents/Notes` (configurable). On exit, Neovim auto-commits any changes
+inside that folder — initialize the repo once:
+
+```bash
+cd ~/Documents/Notes && git init && git add -A && git commit -m "notes: initial"
+```
+
+Write in Markdown, link notes with `[[wiki-links]]`, render inline with `F10`, preview in the
+browser with `F9`. A daily journal is one keystroke away (`<leader>nj`).
+
+---
+
+## Customization
+
+Everything you'll commonly tweak is in the **user-settings block** at the top of `init.lua`:
+
+```lua
+local notes_dir = vim.fn.expand("~/Documents/Notes")  -- notes folder
+local theme     = "dante"                             -- colorscheme (lualine follows it)
+local lsp_servers = { "clangd", "pyright", ... }      -- single source of truth
+local ts_parsers  = { "c", "lua", "markdown", ... }   -- Tree-sitter parsers
+```
+
+Change the theme, add/remove an LSP server, or point the notes folder elsewhere — each in
+exactly one place.
+
+---
+
+## Colorscheme
+
+This config defaults to **dante**, a warm dark theme maintained as a companion project:
+[link to the dante repo]. Drop `dante.lua` into `~/.config/nvim/colors/` (see Installation).
+Any other colorscheme works too — just change `theme`.
+
+---
+
+## Credits
+
+Built on the work of the plugin authors linked in [Features](#features), and on
+[folke/lazy.nvim](https://github.com/folke/lazy.nvim). Thanks to all of them.
+
+## License
+
+Released under the MIT License. Do whatever you like; attribution appreciated.
