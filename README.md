@@ -204,6 +204,32 @@ cd ~/Documents/Notes && git init && git add -A && git commit -m "notes: initial"
 Write in Markdown, link notes with `[[wiki-links]]`, render inline with `F10`, preview in the
 browser with `F9`. A daily journal is one keystroke away (`<leader>nj`).
 
+### Sync over Git (optional)
+
+If the notes folder is a Git repo **with a remote**, the config keeps it in sync automatically:
+
+- **On open** — opening any note (or the notes picker via `F5` / `<leader>nf`) triggers a
+  `git pull` once per session, in the background. If the pull brings changes, open buffers
+  reload; if it fails (offline, divergence), you get a warning to resolve manually (e.g. `F8`/lazygit).
+- **On exit** — Neovim commits any changes and then `git push`es (flushing pending commits too).
+
+A repo without a remote just commits locally, exactly as before — pull/push are skipped.
+
+One-time setup so `git push` knows where to go (sets the upstream/tracking branch):
+
+```bash
+cd ~/Documents/Notes
+git init                          # if not already a repo
+git add -A && git commit -m "notes: initial"
+git remote add origin <your-remote-url>
+git push -u origin main           # -u sets upstream; subsequent pushes need no arguments
+```
+
+> Pull (merge) and push run automatically, so real conflicts between machines are possible.
+> The flow is designed for sequential, one-machine-at-a-time editing (typical for notes); on a
+> conflict it stops and warns, and you resolve it in lazygit (`F8`). On exit, `git push` is
+> wrapped in `timeout 15` (when available) so a dropped network can't hang the quit.
+
 ---
 
 ## Customization
