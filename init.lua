@@ -38,6 +38,40 @@ local function open_today_journal()
   vim.fn.mkdir(dir, "p")
   vim.cmd("edit " .. dir .. "/" .. os.date("%Y-%m-%d") .. ".md")
 end
+
+-- Sincronização Git das notas (só age se notes_dir for repo com remoto configurado).
+local notes_pulled = false
+local function notes_is_repo()
+  return vim.fn.isdirectory(notes_dir .. "/.git") == 1
+end
+local function notes_has_remote()
+  if not notes_is_repo() then return false end
+  local remotes = vim.fn.systemlist({ "git", "-C", notes_dir, "remote" })
+  return vim.v.shell_error == 0 and #remotes > 0
+end
+-- Pull assíncrono, uma vez por sessão, ao abrir a primeira nota.
+local function notes_pull()
+  if notes_pulled or not notes_has_remote() then return end
+  notes_pulled = true
+  vim.system({ "git", "-C", notes_dir, "pull", "--quiet", "--no-rebase" }, {}, function(res)
+    vim.schedule(function()
+      if res.code == 0 then
+        vim.cmd("checktime")  -- recarrega buffers se o pull trouxe alterações
+      else
+        vim.notify("Notas: git pull falhou — resolva manualmente (ex.: F8/lazygit)", vim.log.levels.WARN)
+      end
+    end)
+  end)
+end
+-- Push síncrono (usado ao sair, após o commit). timeout evita travar a saída se a rede cair.
+local function notes_push()
+  if not notes_has_remote() then return end
+  local cmd = { "git", "-C", notes_dir, "push", "--quiet" }
+  if vim.fn.executable("timeout") == 1 then
+    cmd = { "timeout", "15", "git", "-C", notes_dir, "push", "--quiet" }
+  end
+  vim.fn.system(cmd)
+end
 -- ════════════════════════════════════════════════════════════════════
 
 require("lazy").setup({
@@ -125,9 +159,11 @@ require("lazy").setup({
     },
     keys = {
       { "<F5>", function()
+          notes_pull()
           require("fzf-lua").files({ cwd = notes_dir, prompt = "Notes> " })
         end, desc = "Browse Notes" },
       { "<leader>nf", function()
+          notes_pull()
           require("fzf-lua").live_grep({ cwd = notes_dir, prompt = "Search Notes> " })
         end, desc = "Search Notes" },
       { "<leader>ni", function() vim.cmd("edit " .. notes_dir .. "/index.md") end, desc = "Notes Index" },
@@ -416,16 +452,25 @@ vim.api.nvim_create_autocmd("TextYankPost", {
   callback = function() vim.highlight.on_yank({ higroup = "IncSearch", timeout = 300 }) end,
 })
 
--- Auto-versiona as notas: ao sair do Neovim, commita o que mudou em notes_dir.
--- Síncrono de propósito (VimLeavePre): garante que o commit conclua antes de encerrar.
+-- Ao abrir uma nota (qualquer arquivo sob notes_dir), faz git pull se houver remoto.
+vim.api.nvim_create_autocmd("BufReadPost", {
+  callback = function(args)
+    local f = vim.fn.fnamemodify(args.file, ":p")
+    if f:sub(1, #notes_dir + 1) == notes_dir .. "/" then notes_pull() end
+  end,
+})
+
+-- Auto-versiona as notas: ao sair do Neovim, commita o que mudou em notes_dir
+-- e, se houver remoto, faz push. Síncrono de propósito (VimLeavePre).
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
-    if vim.fn.isdirectory(notes_dir .. "/.git") == 0 then return end  -- só se for repo git
+    if not notes_is_repo() then return end  -- só se for repo git
     vim.fn.system({ "git", "-C", notes_dir, "add", "-A" })
     -- `diff --cached --quiet` retorna != 0 quando há algo staged; evita commit vazio
     vim.fn.system({ "git", "-C", notes_dir, "diff", "--cached", "--quiet" })
     if vim.v.shell_error ~= 0 then
       vim.fn.system({ "git", "-C", notes_dir, "commit", "-q", "-m", "notas: " .. os.date("%Y-%m-%d %H:%M") })
     end
+    notes_push()  -- envia commits pendentes (no-op se já estiver tudo no remoto)
   end,
 })
