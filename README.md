@@ -40,7 +40,7 @@ cp init.lua ~/.config/nvim/init.lua
 nvim +"Lazy sync" +"Copilot auth"
 ```
 
-The default theme is [[`dante`](https://github.com/caciano/dante.vim)].
+The default theme is [`dante`](https://github.com/caciano/dante.vim).
 
 ---
 
