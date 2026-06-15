@@ -36,17 +36,11 @@ mv ~/.config/nvim ~/.config/nvim.bak 2>/dev/null
 mkdir -p ~/.config/nvim
 cp init.lua ~/.config/nvim/init.lua
 
-# 3. (Optional) add the companion colorscheme — see the dante repo
-mkdir -p ~/.config/nvim/colors
-cp dante.lua ~/.config/nvim/colors/dante.lua
-
-# 4. First launch: plugins install automatically, then authenticate Copilot
+# 3. First launch: plugins install automatically, then authenticate Copilot
 nvim +"Lazy sync" +"Copilot auth"
 ```
 
-The default theme is `dante`. If you don't install `dante.lua`, set `theme` (see
-[Customization](#customization)) to a colorscheme you have, e.g. `"tokyonight"` or `"seoul256"`,
-both of which ship with this config.
+The default theme is [[`dante`](https://github.com/caciano/dante.vim)].
 
 ---
 
@@ -238,21 +232,12 @@ Everything you'll commonly tweak is in the **user-settings block** at the top of
 
 ```lua
 local notes_dir = vim.fn.expand("~/Documents/Notes")  -- notes folder
-local theme     = "dante"                             -- colorscheme (lualine follows it)
 local lsp_servers = { "clangd", "pyright", ... }      -- single source of truth
 local ts_parsers  = { "c", "lua", "markdown", ... }   -- Tree-sitter parsers
 ```
 
 Change the theme, add/remove an LSP server, or point the notes folder elsewhere — each in
 exactly one place.
-
----
-
-## Colorscheme
-
-This config defaults to **dante**, a warm dark theme maintained as a companion project:
-[link to the dante repo]. Drop `dante.lua` into `~/.config/nvim/colors/` (see Installation).
-Any other colorscheme works too — just change `theme`.
 
 ---
 
