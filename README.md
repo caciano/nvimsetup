@@ -6,7 +6,8 @@ designed to be easy to maintain — all the knobs you'll touch live in one block
 
 > Requires Neovim **0.11+** · plugin manager: [lazy.nvim](https://github.com/folke/lazy.nvim) (bootstraps itself)
 
-Pairs with the [**dante**](https://github.com/caciano/dante.vim) (a warm, dark theme included as a companion).
+Pairs with the [**dante** colorscheme](https://github.com/caciano/dante.vim) — a warm, dark
+theme installed automatically as a plugin.
 
 ---
 
@@ -234,8 +235,17 @@ local lsp_servers = { "clangd", "pyright", ... }      -- single source of truth
 local ts_parsers  = { "c", "lua", "markdown", ... }   -- Tree-sitter parsers
 ```
 
-Change the theme, add/remove an LSP server, or point the notes folder elsewhere — each in
-exactly one place.
+Add/remove an LSP server, adjust the Tree-sitter parsers, or point the notes folder
+elsewhere — each in exactly one place.
+
+---
+
+## Colorscheme
+
+This config defaults to **dante**, a warm dark theme maintained as a companion project:
+[caciano/dante.vim](https://github.com/caciano/dante.vim). It installs automatically with the
+rest of the plugins. To use another, swap the `caciano/dante.vim` plugin and the `colorscheme`
+call near the bottom of `init.lua`.
 
 ---
 
