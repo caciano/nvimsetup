@@ -18,7 +18,6 @@ vim.opt.rtp:prepend(lazypath)
 --  AJUSTES DO USUÁRIO — edite estas variáveis para personalizar o setup
 -- ════════════════════════════════════════════════════════════════════
 local notes_dir = vim.fn.expand("~/Documents/Notes")  -- pasta das notas (mdnotes, journal, git)
-local theme     = "dante"                             -- colorscheme (o lualine segue sozinho)
 
 -- Servidores LSP — o Mason instala e ativa todos. Fonte única usada pelos dois plugins de LSP.
 local lsp_servers = {
@@ -387,7 +386,7 @@ require("lazy").setup({
   { "lervag/vimtex", ft = "tex", opts = { view_method = "zathura", compiler_method = "latexmk" } },
 
   -- Theme & UI
-  { "caciano/dante.vim", lazy = false, priority = 1000 },  -- colorscheme dante (requer colors/dante.lua no repo)
+  { "caciano/dante.vim", lazy = true, priority = 0 },  -- colorscheme dante
   { "folke/tokyonight.nvim", lazy = true },
   { "junegunn/seoul256.vim", lazy = true },
   {
@@ -446,7 +445,7 @@ vim.opt.splitbelow = true
 vim.opt.splitright = true
 vim.opt.completeopt = { "menu", "menuone", "noselect" }
 vim.opt.colorcolumn = "80"
-pcall(vim.cmd.colorscheme, theme)
+pcall(vim.cmd.colorscheme, "dante")
 
 -- Keymaps
 local map = vim.keymap.set
