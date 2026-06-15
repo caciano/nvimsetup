@@ -386,7 +386,7 @@ require("lazy").setup({
   { "lervag/vimtex", ft = "tex", opts = { view_method = "zathura", compiler_method = "latexmk" } },
 
   -- Theme & UI
-  { "caciano/dante.vim", lazy = true, priority = 0 },  -- colorscheme dante
+  { "caciano/dante.vim", lazy = false, priority = 1000 },  -- colorscheme dante (carrega no boot)
   { "folke/tokyonight.nvim", lazy = true },
   { "junegunn/seoul256.vim", lazy = true },
   {
@@ -411,7 +411,7 @@ require("lazy").setup({
   { "windwp/nvim-autopairs", event = "InsertEnter", opts = {} },  -- () de função vem do blink.accept.auto_brackets
 }, {
   ui = { border = "rounded" },
-  install = { colorscheme = { theme } },
+  install = { colorscheme = { "dante" } },
   performance = { rtp = { disabled_plugins = { "gzip", "matchit", "matchparen", "netrwPlugin", "tarPlugin", "tohtml", "tutor", "zipPlugin" } } },
 })
 
