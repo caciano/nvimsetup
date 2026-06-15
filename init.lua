@@ -230,6 +230,31 @@ require("lazy").setup({
       -- Anuncia as capabilities de completação do blink.cmp a todos os servidores
       local ok, blink = pcall(require, "blink.cmp")
       if ok then vim.lsp.config("*", { capabilities = blink.get_lsp_capabilities() }) end
+
+      -- lua_ls: impede que a raiz seja a HOME (que ele recusa por ser grande demais) e
+      -- o ajusta para editar a própria config (reconhece `vim`, não varre terceiros).
+      vim.lsp.config("lua_ls", {
+        root_dir = function(bufnr, on_dir)
+          local fname = vim.api.nvim_buf_get_name(bufnr)
+          local found = vim.fs.root(fname, {
+            ".luarc.json", ".luarc.jsonc", ".luacheckrc", "stylua.toml", ".stylua.toml", ".git",
+          })
+          -- nunca usar HOME ou / como workspace
+          if not found or found == vim.env.HOME or found == "/" then
+            found = vim.fs.dirname(fname)
+          end
+          on_dir(found)
+        end,
+        settings = {
+          Lua = {
+            runtime = { version = "LuaJIT" },
+            diagnostics = { globals = { "vim" } },
+            workspace = { checkThirdParty = false, library = { vim.env.VIMRUNTIME .. "/lua" } },
+            telemetry = { enable = false },
+          },
+        },
+      })
+
       for _, server in ipairs(lsp_servers) do
         pcall(function() vim.lsp.enable(server) end)
       end
@@ -362,6 +387,7 @@ require("lazy").setup({
   { "lervag/vimtex", ft = "tex", opts = { view_method = "zathura", compiler_method = "latexmk" } },
 
   -- Theme & UI
+  { "caciano/dante.vim", lazy = false, priority = 1000 },  -- colorscheme dante (requer colors/dante.lua no repo)
   { "folke/tokyonight.nvim", lazy = true },
   { "junegunn/seoul256.vim", lazy = true },
   {
@@ -420,7 +446,7 @@ vim.opt.splitbelow = true
 vim.opt.splitright = true
 vim.opt.completeopt = { "menu", "menuone", "noselect" }
 vim.opt.colorcolumn = "80"
-vim.cmd("colorscheme " .. theme)
+pcall(vim.cmd.colorscheme, theme)
 
 -- Keymaps
 local map = vim.keymap.set
