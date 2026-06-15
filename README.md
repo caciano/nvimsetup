@@ -6,7 +6,7 @@ designed to be easy to maintain — all the knobs you'll touch live in one block
 
 > Requires Neovim **0.11+** · plugin manager: [lazy.nvim](https://github.com/folke/lazy.nvim) (bootstraps itself)
 
-Pairs with the [**dante** colorscheme](#colorscheme) (a warm, dark theme included as a companion).
+Pairs with the [**dante**](https://github.com/caciano/dante.vim) (a warm, dark theme included as a companion).
 
 ---
 
@@ -39,8 +39,6 @@ cp init.lua ~/.config/nvim/init.lua
 # 3. First launch: plugins install automatically, then authenticate Copilot
 nvim +"Lazy sync" +"Copilot auth"
 ```
-
-The default theme is [`dante`](https://github.com/caciano/dante.vim).
 
 ---
 
