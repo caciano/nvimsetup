@@ -159,7 +159,7 @@ require("lazy").setup({
     keys = {
       { "<F5>", function()
           notes_pull()
-          require("fzf-lua").files({ cwd = notes_dir, prompt = "Notes> " })
+          require("fzf-lua").files({ cwd = notes_dir, prompt = "Notes> ", hidden = false })
         end, desc = "Browse Notes" },
       { "<leader>nf", function()
           notes_pull()
